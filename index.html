@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Custom Dashboard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212; /* Sleek dark mode */
+            color: #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: #1e1e1e;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            text-align: center;
+            width: 350px;
+            border: 1px solid #333;
+        }
+        h1 { 
+            margin-bottom: 25px; 
+            font-size: 24px; 
+            color: #ffffff; 
+            letter-spacing: 0.5px;
+        }
+        .data-box {
+            background: #2d2d2d;
+            padding: 15px;
+            margin: 12px 0;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 500;
+            border-left: 4px solid #00adb5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-left: 20px;
+            padding-right: 20px;
+        }
+        .data-val { 
+            color: #00adb5; 
+            font-size: 22px; 
+            font-weight: bold;
+        }
+        .btn {
+            background-color: #ff4757;
+            color: white;
+            border: none;
+            padding: 14px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 25px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+            width: 100%;
+            box-shadow: 0 4px 10px rgba(255, 71, 87, 0.3);
+        }
+        .btn.on { 
+            background-color: #2ed573; 
+            box-shadow: 0 4px 10px rgba(46, 213, 115, 0.3);
+        }
+        .btn:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>IoT Control Center</h1>
+    
+    <div class="data-box">
+        <span>Temperature:</span>
+        <div><span id="temp" class="data-val">--</span> °C</div>
+    </div>
+    <div class="data-box">
+        <span>Humidity:</span>
+        <div><span id="hum" class="data-val">--</span> %</div>
+    </div>
+
+    <button id="ledBtn" class="btn">Turn ON</button>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    // Your exact Firebase configuration applied directly
+    const firebaseConfig = {
+        apiKey: "AIzaSyCFhbyVOyc2IpPSdBQK38wn2Kruq1nmxv8",
+        authDomain: "esp32-iot-da4e3.firebaseapp.com",
+        databaseURL: "https://esp32-iot-da4e3-default-rtdb.firebaseio.com",
+        projectId: "esp32-iot-da4e3",
+        storageBucket: "esp32-iot-da4e3.appspot.com",
+        messagingSenderId: "1046924680196",
+        appId: "1:1046924680196:web:51fab056fc488ab1972951",
+        measurementId: "G-K4TTQJ4YRD"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // DOM Elements
+    const tempEl = document.getElementById('temp');
+    const humEl = document.getElementById('hum');
+    const ledBtn = document.getElementById('ledBtn');
+
+    let currentLedState = "OFF";
+
+    // 1. Listen for Real-time Sensor Updates from ESP32
+    const tempRef = ref(db, 'sensor/temperature');
+    onValue(tempRef, (snapshot) => {
+        const val = snapshot.val();
+        tempEl.innerText = (val !== null) ? val : "--";
+    });
+
+    const humRef = ref(db, 'sensor/humidity');
+    onValue(humRef, (snapshot) => {
+        const val = snapshot.val();
+        humEl.innerText = (val !== null) ? val : "--";
+    });
+
+    // 2. Listen for current LED status to sync UI button state
+    const ledRef = ref(db, 'controls/led');
+    onValue(ledRef, (snapshot) => {
+        currentLedState = snapshot.val() || "OFF";
+        if (currentLedState === "ON") {
+            ledBtn.innerText = "Turn OFF";
+            ledBtn.classList.add('on');
+        } else {
+            ledBtn.innerText = "Turn ON";
+            ledBtn.classList.remove('on');
+        }
+    });
+
+    // 3. Handle Button Click to send command to ESP32
+    ledBtn.addEventListener('click', () => {
+        const nextState = (currentLedState === "ON") ? "OFF" : "ON";
+        set(ref(db, 'controls/led'), nextState);
+    });
+</script>
+</body>
+</html>
